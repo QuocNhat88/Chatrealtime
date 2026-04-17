@@ -2,7 +2,6 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import dotenv from "dotenv";
 
-// Load biến môi trường từ file .env
 dotenv.config();
 
 const connectionString = process.env.DATABASE_URL;
@@ -12,16 +11,17 @@ if (!connectionString) {
   process.exit(1);
 }
 
-// Khởi tạo client kết nối tới PostgreSQL của Supabase
-const client = postgres(connectionString, { prepare: false });
+const client = postgres(connectionString, {
+  prepare: false, // Bắt buộc cho Supabase connection pooler
+  ssl: "require", // Bắt buộc mã hóa SSL khi kết nối tới nền tảng Cloud như Supabase
+  max: 10, // Giới hạn pool size, tránh mở quá nhiều kết nối rác làm nghẽn Supabase
+  idle_timeout: 20, // Đóng kết nối nếu rảnh rỗi quá 20s (tránh bị Supabase reset đột ngột)
+});
 
-// Tích hợp Drizzle ORM
 export const db = drizzle(client);
 
-// Hàm nhỏ để test kết nối
 export const checkDbConnection = async () => {
   try {
-    // Chạy một query đơn giản để check
     await client`SELECT 1`;
     console.log("✅ Kết nối Database (Supabase) thành công!");
   } catch (error) {
